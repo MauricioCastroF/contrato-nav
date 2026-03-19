@@ -95,8 +95,7 @@ export async function getSecopContratos(
 /** Get full contract detail from SECOP */
 export async function getSecopContratoDetail(idContrato: string): Promise<SecopContrato | null> {
   const data = await fetchSecop<SecopContrato[]>({
-    $where: `id_contrato = '${idContrato}'`,
-    $limit: "1",
+    $query: `SELECT * WHERE id_contrato = '${idContrato}' LIMIT 1`,
   });
   return data[0] || null;
 }
