@@ -122,6 +122,63 @@ export type Database = {
         }
         Relationships: []
       }
+      contratos_seguimiento: {
+        Row: {
+          adicion_si_no: string | null
+          created_at: string
+          critico: string | null
+          detalle_modif: string | null
+          fecha_adicion: string | null
+          fecha_modif: string | null
+          id: string
+          id_contrato: string
+          justificacion_adicion: string | null
+          modif_si_no: string | null
+          observaciones: string | null
+          situacion: string | null
+          tipo_riesgo: string | null
+          tipo_tramite: string | null
+          updated_at: string
+          valor_adicion: number | null
+        }
+        Insert: {
+          adicion_si_no?: string | null
+          created_at?: string
+          critico?: string | null
+          detalle_modif?: string | null
+          fecha_adicion?: string | null
+          fecha_modif?: string | null
+          id?: string
+          id_contrato: string
+          justificacion_adicion?: string | null
+          modif_si_no?: string | null
+          observaciones?: string | null
+          situacion?: string | null
+          tipo_riesgo?: string | null
+          tipo_tramite?: string | null
+          updated_at?: string
+          valor_adicion?: number | null
+        }
+        Update: {
+          adicion_si_no?: string | null
+          created_at?: string
+          critico?: string | null
+          detalle_modif?: string | null
+          fecha_adicion?: string | null
+          fecha_modif?: string | null
+          id?: string
+          id_contrato?: string
+          justificacion_adicion?: string | null
+          modif_si_no?: string | null
+          observaciones?: string | null
+          situacion?: string | null
+          tipo_riesgo?: string | null
+          tipo_tramite?: string | null
+          updated_at?: string
+          valor_adicion?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
