@@ -82,18 +82,18 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
   const canLoad = !!selectedContrato;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-border p-4">
-        <div className="flex items-center gap-2 text-primary">
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      <div className="border-b border-sidebar-border p-4">
+        <div className="flex items-center gap-2 text-secondary">
           <Filter className="h-4 w-4" />
           <h2 className="text-sm font-semibold">Filtros de Búsqueda</h2>
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Año</Label>
+          <Label className="text-xs font-medium text-sidebar-foreground/70">Año</Label>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
               <SelectValue placeholder="Seleccionar año" />
             </SelectTrigger>
             <SelectContent>
@@ -105,9 +105,9 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Mes</Label>
+          <Label className="text-xs font-medium text-sidebar-foreground/70">Mes</Label>
           <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={!selectedYear}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
               <SelectValue placeholder="Seleccionar mes" />
             </SelectTrigger>
             <SelectContent>
@@ -119,9 +119,9 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Seccional</Label>
+          <Label className="text-xs font-medium text-sidebar-foreground/70">Seccional</Label>
           <Select value={selectedSeccional} onValueChange={setSelectedSeccional} disabled={!selectedMonth}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
               <SelectValue placeholder="Seleccionar seccional" />
             </SelectTrigger>
             <SelectContent>
@@ -133,9 +133,9 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">ID Contrato</Label>
+          <Label className="text-xs font-medium text-sidebar-foreground/70">ID Contrato</Label>
           <Select value={selectedContrato} onValueChange={setSelectedContrato} disabled={!selectedSeccional}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
               <SelectValue placeholder="Seleccionar contrato" />
             </SelectTrigger>
             <SelectContent>
@@ -149,14 +149,14 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
         </div>
 
         <Button
-          className="mt-2 w-full gap-2"
+          className="mt-2 w-full gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90"
           disabled={!canLoad || loading}
           onClick={() => onLoadContrato(selectedContrato)}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           Cargar Contrato
         </Button>
-        <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={handleClear}>
+        <Button variant="ghost" size="sm" className="gap-1 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent" onClick={handleClear}>
           <RotateCcw className="h-3 w-3" />
           Limpiar Filtros
         </Button>
@@ -164,7 +164,7 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
 
       {loadingFilters && (
         <div className="flex items-center justify-center p-4">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <Loader2 className="h-4 w-4 animate-spin text-secondary" />
         </div>
       )}
     </div>

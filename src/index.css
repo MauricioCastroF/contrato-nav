@@ -6,39 +6,39 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 15%;
+    --background: 220 20% 97%;
+    --foreground: 220 30% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 220 30% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
-    --primary: 142 50% 36%;
+    --popover-foreground: 220 30% 12%;
+    --primary: 216 60% 28%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 215 25% 15%;
-    --muted: 210 15% 94%;
-    --muted-foreground: 215 12% 50%;
-    --accent: 82 60% 45%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
+    --secondary: 45 90% 52%;
+    --secondary-foreground: 220 30% 12%;
+    --muted: 220 15% 93%;
+    --muted-foreground: 220 10% 46%;
+    --accent: 45 90% 52%;
+    --accent-foreground: 220 30% 12%;
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 90%;
-    --input: 214 20% 90%;
-    --ring: 142 50% 36%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 216 60% 28%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 215 25% 27%;
-    --sidebar-primary: 142 50% 36%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 142 40% 95%;
-    --sidebar-accent-foreground: 142 50% 25%;
-    --sidebar-border: 214 20% 92%;
-    --sidebar-ring: 142 50% 36%;
-    --success: 142 60% 40%;
+    --sidebar-background: 216 60% 22%;
+    --sidebar-foreground: 220 15% 92%;
+    --sidebar-primary: 45 90% 52%;
+    --sidebar-primary-foreground: 220 30% 12%;
+    --sidebar-accent: 216 50% 30%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 216 45% 32%;
+    --sidebar-ring: 45 90% 52%;
+    --success: 142 55% 38%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --info: 210 80% 50%;
+    --warning: 45 90% 52%;
+    --warning-foreground: 220 30% 12%;
+    --info: 216 60% 45%;
     --info-foreground: 0 0% 100%;
   }
 }
