@@ -14,7 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contratos_seccionales: {
+        Row: {
+          adicion_si_no: string | null
+          ano: number
+          contratista: string | null
+          created_at: string
+          critico: string | null
+          detalle_modif: string | null
+          duracion_contrato: string | null
+          estado_del_contrato: string | null
+          fecha_adicion: string | null
+          fecha_de_inicio: string | null
+          fecha_de_suscripcion: string | null
+          fecha_modif: string | null
+          fecha_terminacion: string | null
+          id: string
+          justificacion_adicion: string | null
+          mes: number
+          modalidad_de_contratacion: string | null
+          modif_si_no: string | null
+          n_contrato: string
+          nombre_supervisor: string | null
+          objeto_del_contrato: string | null
+          observaciones: string | null
+          seccional: string
+          situacion: string | null
+          tipo_de_contrato: string | null
+          tipo_riesgo: string | null
+          tipo_tramite: string | null
+          updated_at: string
+          url_proceso: string | null
+          valor_adicion: number | null
+          valor_del_contrato: number | null
+          valor_pagado: number | null
+          valor_pendiente_ejecucion: number | null
+        }
+        Insert: {
+          adicion_si_no?: string | null
+          ano: number
+          contratista?: string | null
+          created_at?: string
+          critico?: string | null
+          detalle_modif?: string | null
+          duracion_contrato?: string | null
+          estado_del_contrato?: string | null
+          fecha_adicion?: string | null
+          fecha_de_inicio?: string | null
+          fecha_de_suscripcion?: string | null
+          fecha_modif?: string | null
+          fecha_terminacion?: string | null
+          id?: string
+          justificacion_adicion?: string | null
+          mes: number
+          modalidad_de_contratacion?: string | null
+          modif_si_no?: string | null
+          n_contrato: string
+          nombre_supervisor?: string | null
+          objeto_del_contrato?: string | null
+          observaciones?: string | null
+          seccional: string
+          situacion?: string | null
+          tipo_de_contrato?: string | null
+          tipo_riesgo?: string | null
+          tipo_tramite?: string | null
+          updated_at?: string
+          url_proceso?: string | null
+          valor_adicion?: number | null
+          valor_del_contrato?: number | null
+          valor_pagado?: number | null
+          valor_pendiente_ejecucion?: number | null
+        }
+        Update: {
+          adicion_si_no?: string | null
+          ano?: number
+          contratista?: string | null
+          created_at?: string
+          critico?: string | null
+          detalle_modif?: string | null
+          duracion_contrato?: string | null
+          estado_del_contrato?: string | null
+          fecha_adicion?: string | null
+          fecha_de_inicio?: string | null
+          fecha_de_suscripcion?: string | null
+          fecha_modif?: string | null
+          fecha_terminacion?: string | null
+          id?: string
+          justificacion_adicion?: string | null
+          mes?: number
+          modalidad_de_contratacion?: string | null
+          modif_si_no?: string | null
+          n_contrato?: string
+          nombre_supervisor?: string | null
+          objeto_del_contrato?: string | null
+          observaciones?: string | null
+          seccional?: string
+          situacion?: string | null
+          tipo_de_contrato?: string | null
+          tipo_riesgo?: string | null
+          tipo_tramite?: string | null
+          updated_at?: string
+          url_proceso?: string | null
+          valor_adicion?: number | null
+          valor_del_contrato?: number | null
+          valor_pagado?: number | null
+          valor_pendiente_ejecucion?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
