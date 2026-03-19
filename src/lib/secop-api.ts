@@ -47,10 +47,13 @@ async function fetchSecop<T>(params: Record<string, string>): Promise<T> {
 
 /** Extract seccional name from nombre_entidad */
 function extractSeccional(nombre: string): string {
+  // Handles various formats:
   // "RAMA JUDICIAL - DIRECCIÓN SECCIONAL DE ADMINISTRACIÓN JUDICIAL DE VILLAVICENCIO"
-  // → "VILLAVICENCIO"
-  const match = nombre.match(/JUDICIAL\s+DE\s+(.+)$/i);
-  return match ? match[1].trim() : nombre;
+  // "Rama Judicial – Dirección Seccional de Administración Judicial de Bogotá"
+  const match = nombre.match(/Judicial\s*(?:de\s+)?(.+)$/i);
+  if (!match) return nombre;
+  const city = match[1].trim().replace(/\.$/, ""); // remove trailing period
+  return city.toUpperCase();
 }
 
 /** Get distinct years from fecha_de_firma */
