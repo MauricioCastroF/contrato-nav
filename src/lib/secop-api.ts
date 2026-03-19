@@ -1,5 +1,5 @@
 const SECOP_BASE = "https://www.datos.gov.co/resource/jbjy-vk9h.json";
-const ENTIDAD_FILTER = `nombre_entidad like '%RAMA JUDICIAL%'`;
+const ENTIDAD_FILTER = `upper(nombre_entidad) like '%RAMA JUDICIAL%SECCIONAL%'`;
 
 export interface SecopContrato {
   nombre_entidad: string;
