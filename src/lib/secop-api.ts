@@ -1,5 +1,5 @@
 const SECOP_BASE = "https://www.datos.gov.co/resource/jbjy-vk9h.json";
-const ENTIDAD_FILTER = `nombre_entidad like '%RAMA JUDICIAL%'`;
+const ENTIDAD_FILTER = `upper(nombre_entidad) like '%RAMA JUDICIAL%SECCIONAL%'`;
 
 export interface SecopContrato {
   nombre_entidad: string;
@@ -47,10 +47,10 @@ async function fetchSecop<T>(params: Record<string, string>): Promise<T> {
 
 /** Extract seccional name from nombre_entidad */
 function extractSeccional(nombre: string): string {
-  // "RAMA JUDICIAL - DIRECCIÓN SECCIONAL DE ADMINISTRACIÓN JUDICIAL DE VILLAVICENCIO"
-  // → "VILLAVICENCIO"
-  const match = nombre.match(/JUDICIAL\s+DE\s+(.+)$/i);
-  return match ? match[1].trim() : nombre;
+  // Match the city name after the last "Judicial de"
+  const match = nombre.match(/Judicial\s+de\s+([^-–]+?)\s*$/i);
+  if (!match) return nombre.trim();
+  return match[1].trim().replace(/\.$/, "").toUpperCase();
 }
 
 /** Get distinct years from fecha_de_firma */
@@ -84,7 +84,7 @@ export async function getSecopContratos(
   seccional: string
 ): Promise<Array<{ id_contrato: string; proveedor_adjudicado: string }>> {
   const data = await fetchSecop<SecopContrato[]>({
-    $query: `SELECT id_contrato, proveedor_adjudicado WHERE ${ENTIDAD_FILTER} AND date_extract_y(fecha_de_firma) = ${year} AND date_extract_m(fecha_de_firma) = ${month} AND nombre_entidad like '%${seccional}%' ORDER BY id_contrato ASC LIMIT 1000`,
+    $query: `SELECT id_contrato, proveedor_adjudicado WHERE ${ENTIDAD_FILTER} AND date_extract_y(fecha_de_firma) = ${year} AND date_extract_m(fecha_de_firma) = ${month} AND upper(nombre_entidad) like '%${seccional}%' ORDER BY id_contrato ASC LIMIT 1000`,
   });
   return data.map((d) => ({
     id_contrato: d.id_contrato,
