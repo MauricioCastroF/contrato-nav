@@ -40,9 +40,36 @@ function buildUrl(params: Record<string, string>): string {
 }
 
 async function fetchSecop<T>(params: Record<string, string>): Promise<T> {
-  const res = await fetch(buildUrl(params));
-  if (!res.ok) throw new Error(`SECOP API error: ${res.status}`);
-  return res.json();
+  const url = buildUrl(params);
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        if (res.status >= 500 && attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+          continue;
+        }
+        throw new Error(`SECOP API error: ${res.status}`);
+      }
+
+      return res.json();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Unknown SECOP API error");
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+        continue;
+      }
+    }
+  }
+
+  throw lastError ?? new Error("SECOP API error");
 }
 
 /** Extract seccional name from nombre_entidad */
