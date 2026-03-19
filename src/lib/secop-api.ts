@@ -47,8 +47,8 @@ async function fetchSecop<T>(params: Record<string, string>): Promise<T> {
 
 /** Extract seccional name from nombre_entidad */
 function extractSeccional(nombre: string): string {
-  // Match the city name after the last "Judicial de"
-  const match = nombre.match(/Judicial\s+de\s+([^-–]+?)\s*$/i);
+  // Match the city name after the last "Judicial de" — handles various dash/special chars
+  const match = nombre.match(/Judicial\s+de\s+(.+)$/i);
   if (!match) return nombre.trim();
   return match[1].trim().replace(/\.$/, "").toUpperCase();
 }
