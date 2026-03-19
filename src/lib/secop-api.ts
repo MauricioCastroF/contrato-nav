@@ -84,8 +84,7 @@ export async function getSecopContratos(
   seccional: string
 ): Promise<Array<{ id_contrato: string; proveedor_adjudicado: string }>> {
   const data = await fetchSecop<SecopContrato[]>({
-    $query: `SELECT id_contrato, proveedor_adjudicado WHERE ${ENTIDAD_FILTER} AND date_extract_y(fecha_de_firma) = ${year} AND date_extract_m(fecha_de_firma) = ${month} AND nombre_entidad like '%${seccional}%' ORDER BY id_contrato ASC`,
-    $limit: "1000",
+    $query: `SELECT id_contrato, proveedor_adjudicado WHERE ${ENTIDAD_FILTER} AND date_extract_y(fecha_de_firma) = ${year} AND date_extract_m(fecha_de_firma) = ${month} AND nombre_entidad like '%${seccional}%' ORDER BY id_contrato ASC LIMIT 1000`,
   });
   return data.map((d) => ({
     id_contrato: d.id_contrato,
@@ -96,8 +95,7 @@ export async function getSecopContratos(
 /** Get full contract detail from SECOP */
 export async function getSecopContratoDetail(idContrato: string): Promise<SecopContrato | null> {
   const data = await fetchSecop<SecopContrato[]>({
-    $where: `id_contrato = '${idContrato}'`,
-    $limit: "1",
+    $query: `SELECT * WHERE id_contrato = '${idContrato}' LIMIT 1`,
   });
   return data[0] || null;
 }
