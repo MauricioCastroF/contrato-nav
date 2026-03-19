@@ -3,7 +3,7 @@ import { Search, Filter, RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { getDistinctYears, getDistinctMonths, getDistinctSeccionales, getContratos } from "@/lib/supabase-queries";
+import { getSecopYears, getSecopMonths, getSecopSeccionales, getSecopContratos } from "@/lib/secop-api";
 import { useToast } from "@/hooks/use-toast";
 
 const MONTH_NAMES: Record<number, string> = {
@@ -13,7 +13,7 @@ const MONTH_NAMES: Record<number, string> = {
 };
 
 interface FilterSidebarProps {
-  onLoadContrato: (nContrato: string) => void;
+  onLoadContrato: (idContrato: string) => void;
   loading?: boolean;
 }
 
@@ -22,7 +22,7 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
   const [years, setYears] = useState<number[]>([]);
   const [months, setMonths] = useState<number[]>([]);
   const [seccionales, setSeccionales] = useState<string[]>([]);
-  const [contratos, setContratos] = useState<{ n_contrato: string; contratista: string | null }[]>([]);
+  const [contratos, setContratos] = useState<{ id_contrato: string; proveedor_adjudicado: string }[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedSeccional, setSelectedSeccional] = useState<string>("");
@@ -30,8 +30,8 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
   const [loadingFilters, setLoadingFilters] = useState(false);
 
   useEffect(() => {
-    getDistinctYears().then(setYears).catch(() =>
-      toast({ title: "Error", description: "No se pudieron cargar los años", variant: "destructive" })
+    getSecopYears().then(setYears).catch(() =>
+      toast({ title: "Error", description: "No se pudieron cargar los años desde SECOP", variant: "destructive" })
     );
   }, []);
 
@@ -44,7 +44,7 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
     setContratos([]);
     if (selectedYear) {
       setLoadingFilters(true);
-      getDistinctMonths(Number(selectedYear)).then(setMonths).finally(() => setLoadingFilters(false));
+      getSecopMonths(Number(selectedYear)).then(setMonths).finally(() => setLoadingFilters(false));
     }
   }, [selectedYear]);
 
@@ -55,7 +55,7 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
     setContratos([]);
     if (selectedYear && selectedMonth) {
       setLoadingFilters(true);
-      getDistinctSeccionales(Number(selectedYear), Number(selectedMonth))
+      getSecopSeccionales(Number(selectedYear), Number(selectedMonth))
         .then(setSeccionales)
         .finally(() => setLoadingFilters(false));
     }
@@ -66,7 +66,7 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
     setContratos([]);
     if (selectedYear && selectedMonth && selectedSeccional) {
       setLoadingFilters(true);
-      getContratos(Number(selectedYear), Number(selectedMonth), selectedSeccional)
+      getSecopContratos(Number(selectedYear), Number(selectedMonth), selectedSeccional)
         .then(setContratos)
         .finally(() => setLoadingFilters(false));
     }
@@ -88,6 +88,7 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
           <Filter className="h-4 w-4" />
           <h2 className="text-sm font-semibold">Filtros de Búsqueda</h2>
         </div>
+        <p className="text-[10px] text-sidebar-foreground/50 mt-1">Datos en tiempo real desde SECOP II</p>
       </div>
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="space-y-1.5">
@@ -140,8 +141,8 @@ export function FilterSidebar({ onLoadContrato, loading }: FilterSidebarProps) {
             </SelectTrigger>
             <SelectContent>
               {contratos.map((c) => (
-                <SelectItem key={c.n_contrato} value={c.n_contrato}>
-                  <span className="block truncate text-xs">{c.n_contrato}</span>
+                <SelectItem key={c.id_contrato} value={c.id_contrato}>
+                  <span className="block truncate text-xs">{c.id_contrato}</span>
                 </SelectItem>
               ))}
             </SelectContent>
