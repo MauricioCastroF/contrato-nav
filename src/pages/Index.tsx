@@ -48,7 +48,7 @@ export default function Index() {
           </SheetContent>
         </Sheet>
 
-        <main className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex flex-1 flex-col overflow-y-auto">
           <ContractDetail contrato={contrato} isLoading={isLoading} onSaved={handleSaved} />
         </main>
       </div>
