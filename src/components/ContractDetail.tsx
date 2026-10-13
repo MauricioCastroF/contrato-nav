@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
-import { FileText, Calendar, DollarSign, Loader2, Save, X, AlertTriangle, Settings, PlusCircle, MessageSquare, ExternalLink } from "lucide-react";
+import { FileText, Calendar, DollarSign, Loader2, Save, X, MessageSquare, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { upsertLocalTracking, getLocalTracking } from "@/lib/supabase-queries";
@@ -46,17 +43,6 @@ export function ContractDetail({ contrato, isLoading, onSaved }: ContractDetailP
   const [saving, setSaving] = useState(false);
   const [loadingTracking, setLoadingTracking] = useState(false);
 
-  const [critico, setCritico] = useState("NO");
-  const [tipoRiesgo, setTipoRiesgo] = useState("");
-  const [situacion, setSituacion] = useState("");
-  const [modifSiNo, setModifSiNo] = useState("NO");
-  const [fechaModif, setFechaModif] = useState("");
-  const [tipoTramite, setTipoTramite] = useState("");
-  const [detalleModif, setDetalleModif] = useState("");
-  const [adicionSiNo, setAdicionSiNo] = useState("NO");
-  const [valorAdicion, setValorAdicion] = useState("");
-  const [fechaAdicion, setFechaAdicion] = useState("");
-  const [justificacionAdicion, setJustificacionAdicion] = useState("");
   const [observaciones, setObservaciones] = useState("");
 
   // Load local tracking data when contract changes
@@ -65,26 +51,7 @@ export function ContractDetail({ contrato, isLoading, onSaved }: ContractDetailP
     setLoadingTracking(true);
     getLocalTracking(contrato.id_contrato)
       .then((tracking) => {
-        if (tracking) {
-          setCritico(tracking.critico || "NO");
-          setTipoRiesgo(tracking.tipo_riesgo || "");
-          setSituacion(tracking.situacion || "");
-          setModifSiNo(tracking.modif_si_no || "NO");
-          setFechaModif(tracking.fecha_modif || "");
-          setTipoTramite(tracking.tipo_tramite || "");
-          setDetalleModif(tracking.detalle_modif || "");
-          setAdicionSiNo(tracking.adicion_si_no || "NO");
-          setValorAdicion(tracking.valor_adicion ? String(tracking.valor_adicion) : "");
-          setFechaAdicion(tracking.fecha_adicion || "");
-          setJustificacionAdicion(tracking.justificacion_adicion || "");
-          setObservaciones(tracking.observaciones || "");
-        } else {
-          // Reset to defaults
-          setCritico("NO"); setTipoRiesgo(""); setSituacion("");
-          setModifSiNo("NO"); setFechaModif(""); setTipoTramite("");
-          setDetalleModif(""); setAdicionSiNo("NO"); setValorAdicion("");
-          setFechaAdicion(""); setJustificacionAdicion(""); setObservaciones("");
-        }
+        setObservaciones(tracking?.observaciones || "");
       })
       .catch(() => {
         toast({ title: "Aviso", description: "No se pudieron cargar los datos de seguimiento local.", variant: "destructive" });
@@ -96,17 +63,6 @@ export function ContractDetail({ contrato, isLoading, onSaved }: ContractDetailP
     if (contrato) {
       // Re-load from DB
       getLocalTracking(contrato.id_contrato).then((tracking) => {
-        setCritico(tracking?.critico || "NO");
-        setTipoRiesgo(tracking?.tipo_riesgo || "");
-        setSituacion(tracking?.situacion || "");
-        setModifSiNo(tracking?.modif_si_no || "NO");
-        setFechaModif(tracking?.fecha_modif || "");
-        setTipoTramite(tracking?.tipo_tramite || "");
-        setDetalleModif(tracking?.detalle_modif || "");
-        setAdicionSiNo(tracking?.adicion_si_no || "NO");
-        setValorAdicion(tracking?.valor_adicion ? String(tracking.valor_adicion) : "");
-        setFechaAdicion(tracking?.fecha_adicion || "");
-        setJustificacionAdicion(tracking?.justificacion_adicion || "");
         setObservaciones(tracking?.observaciones || "");
       });
     }
@@ -117,17 +73,6 @@ export function ContractDetail({ contrato, isLoading, onSaved }: ContractDetailP
     setSaving(true);
     try {
       await upsertLocalTracking(contrato.id_contrato, {
-        critico,
-        tipo_riesgo: tipoRiesgo || null,
-        situacion: situacion || null,
-        modif_si_no: modifSiNo,
-        fecha_modif: fechaModif || null,
-        tipo_tramite: tipoTramite || null,
-        detalle_modif: detalleModif || null,
-        adicion_si_no: adicionSiNo,
-        valor_adicion: valorAdicion ? Number(valorAdicion) : null,
-        fecha_adicion: fechaAdicion || null,
-        justificacion_adicion: justificacionAdicion || null,
         observaciones: observaciones || null,
       });
       toast({ title: "✅ Cambios guardados", description: "Los datos de seguimiento se actualizaron correctamente." });
@@ -228,148 +173,6 @@ export function ContractDetail({ contrato, isLoading, onSaved }: ContractDetailP
 
         {/* Editable Form Cards - Local tracking */}
         <div className="space-y-4 p-6">
-          {/* Situación Crítica */}
-          <Card className="animate-fade-in border-border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                Reporte de Situación Crítica
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">¿Es crítico?</Label>
-                  <Select value={critico} onValueChange={setCritico}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SI">SI</SelectItem>
-                      <SelectItem value="NO">NO</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Tipo de Riesgo</Label>
-                  <Select value={tipoRiesgo} onValueChange={setTipoRiesgo} disabled={critico === "NO"}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Financiero">Financiero</SelectItem>
-                      <SelectItem value="Operativo">Operativo</SelectItem>
-                      <SelectItem value="Legal">Legal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Descripción de la situación</Label>
-                <Textarea
-                  value={situacion}
-                  onChange={(e) => setSituacion(e.target.value)}
-                  placeholder="Describa la situación..."
-                  rows={3}
-                  disabled={critico === "NO"}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Modificaciones */}
-          <Card className="animate-fade-in border-border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <Settings className="h-4 w-4 text-info" />
-                Modificaciones Contractuales
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">¿Tiene modificaciones?</Label>
-                  <Select value={modifSiNo} onValueChange={setModifSiNo}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SI">SI</SelectItem>
-                      <SelectItem value="NO">NO</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Fecha de Modificación</Label>
-                  <Input type="date" value={fechaModif} onChange={(e) => setFechaModif(e.target.value)} disabled={modifSiNo === "NO"} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Tipo de Trámite</Label>
-                <Select value={tipoTramite} onValueChange={setTipoTramite} disabled={modifSiNo === "NO"}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Prórroga">Prórroga</SelectItem>
-                    <SelectItem value="Suspensión">Suspensión</SelectItem>
-                    <SelectItem value="Cesión">Cesión</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Detalle de la modificación</Label>
-                <Textarea
-                  value={detalleModif}
-                  onChange={(e) => setDetalleModif(e.target.value)}
-                  placeholder="Describa la modificación..."
-                  rows={3}
-                  disabled={modifSiNo === "NO"}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Adiciones */}
-          <Card className="animate-fade-in border-border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <PlusCircle className="h-4 w-4 text-success" />
-                Adiciones Presupuestales
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">¿Tiene adiciones?</Label>
-                  <Select value={adicionSiNo} onValueChange={setAdicionSiNo}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SI">SI</SelectItem>
-                      <SelectItem value="NO">NO</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Valor de la Adición</Label>
-                  <Input
-                    type="number"
-                    value={valorAdicion}
-                    onChange={(e) => setValorAdicion(e.target.value)}
-                    placeholder="$0"
-                    disabled={adicionSiNo === "NO"}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Fecha de la Adición</Label>
-                <Input type="date" value={fechaAdicion} onChange={(e) => setFechaAdicion(e.target.value)} disabled={adicionSiNo === "NO"} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Justificación</Label>
-                <Textarea
-                  value={justificacionAdicion}
-                  onChange={(e) => setJustificacionAdicion(e.target.value)}
-                  placeholder="Justifique la adición presupuestal..."
-                  rows={3}
-                  disabled={adicionSiNo === "NO"}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Observaciones */}
           <Card className="animate-fade-in border-border shadow-sm">
             <CardHeader className="pb-3">
