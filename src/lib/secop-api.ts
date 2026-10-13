@@ -1,7 +1,84 @@
-const SECOP_BASE = "https://www.datos.gov.co/resource/jbjy-vk9h.json";
-const ENTIDAD_WHERE = `upper(nombre_entidad) like '%RAMA JUDICIAL%SECCIONAL%'`;
+/**
+ * SECOP II – Procesos de Contratación (datos.gov.co, dataset p6dx-8zbt),
+ * consultado mediante la API SODA v3 (`/api/v3/views/{id}/query.json`).
+ *
+ * Los registros del dataset se normalizan a `SecopContrato` para que el resto
+ * de la aplicación siga trabajando con la misma forma de datos.
+ */
+const SECOP_BASE = "https://www.datos.gov.co/api/v3/views/p6dx-8zbt/query.json";
+const SECOP_APP_TOKEN: string | undefined = import.meta.env.VITE_SOCRATA_APP_TOKEN;
+const ENTIDAD_WHERE = `(caseless_contains(\`entidad\`, "ADMINISTRACIÓN JUDICIAL") OR caseless_contains(\`entidad\`, "DESAJ"))`;
+/** Fecha usada para los filtros de año/mes y para ordenar */
+const FECHA_FIELD = "fecha_de_publicacion_del";
 const PAGE_SIZE = 1000;
 const REQUEST_TIMEOUT_MS = 30000;
+
+const PROCESO_FIELDS = [
+  "entidad",
+  "nit_entidad",
+  "departamento_entidad",
+  "ciudad_entidad",
+  "ordenentidad",
+  "codigo_pci",
+  "id_del_proceso",
+  "referencia_del_proceso",
+  "ppi",
+  "id_del_portafolio",
+  "nombre_del_procedimiento",
+  "descripci_n_del_procedimiento",
+  "fase",
+  "fecha_de_publicacion_del",
+  "fecha_de_ultima_publicaci",
+  "fecha_de_publicacion_fase",
+  "fecha_de_publicacion_fase_1",
+  "fecha_de_publicacion",
+  "fecha_de_publicacion_fase_2",
+  "fecha_de_publicacion_fase_3",
+  "precio_base",
+  "modalidad_de_contratacion",
+  "justificaci_n_modalidad_de",
+  "duracion",
+  "unidad_de_duracion",
+  "fecha_de_recepcion_de",
+  "fecha_de_apertura_de_respuesta",
+  "fecha_de_apertura_efectiva",
+  "ciudad_de_la_unidad_de",
+  "nombre_de_la_unidad_de",
+  "proveedores_invitados",
+  "proveedores_con_invitacion",
+  "visualizaciones_del",
+  "proveedores_que_manifestaron",
+  "respuestas_al_procedimiento",
+  "respuestas_externas",
+  "conteo_de_respuestas_a_ofertas",
+  "proveedores_unicos_con",
+  "numero_de_lotes",
+  "estado_del_procedimiento",
+  "id_estado_del_procedimiento",
+  "adjudicado",
+  "id_adjudicacion",
+  "codigoproveedor",
+  "departamento_proveedor",
+  "ciudad_proveedor",
+  "fecha_adjudicacion",
+  "valor_total_adjudicacion",
+  "nombre_del_adjudicador",
+  "nombre_del_proveedor",
+  "nit_del_proveedor_adjudicado",
+  "codigo_principal_de_categoria",
+  "estado_de_apertura_del_proceso",
+  "tipo_de_contrato",
+  "subtipo_de_contrato",
+  "categorias_adicionales",
+  "urlproceso",
+  "codigo_entidad",
+  "estado_resumen",
+] as const;
+
+/** Raw row from dataset p6dx-8zbt */
+export type SecopProceso = Partial<Record<Exclude<(typeof PROCESO_FIELDS)[number], "urlproceso">, string>> & {
+  urlproceso?: { url: string } | string;
+};
 
 export interface SecopContrato {
   nombre_entidad: string;
@@ -79,22 +156,28 @@ export interface RiesgoInfo {
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-function buildUrl(base: string, params: Record<string, string>): string {
-  const url = new URL(base);
-  for (const [k, v] of Object.entries(params)) {
-    url.searchParams.set(k, v);
-  }
-  return url.toString();
+/** Escape a value for use inside a SoQL double-quoted string literal */
+function soqlString(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function yearMonthWhere(year: number, month?: number): string {
+  let where = `date_extract_y(\`${FECHA_FIELD}\`) = ${Number(year)}`;
+  if (month !== undefined) where += ` AND date_extract_m(\`${FECHA_FIELD}\`) = ${Number(month)}`;
+  return where;
+}
+
+function seccionalWhere(seccional: string): string {
+  return `caseless_contains(\`entidad\`, ${soqlString(seccional)})`;
 }
 
 async function fetchWithTimeout<T>(url: string): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (SECOP_APP_TOKEN) headers["X-App-Token"] = SECOP_APP_TOKEN;
   try {
-    const res = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    });
+    const res = await fetch(url, { headers, signal: controller.signal });
     if (!res.ok) throw new Error(`SECOP HTTP ${res.status}`);
     return res.json() as Promise<T>;
   } finally {
@@ -102,33 +185,34 @@ async function fetchWithTimeout<T>(url: string): Promise<T> {
   }
 }
 
-async function fetchPage<T>(params: Record<string, string>, attempt = 0): Promise<T> {
-  const url = buildUrl(SECOP_BASE, params);
+/** Run a SoQL query against the SODA v3 endpoint, with retries */
+async function fetchQuery<T>(query: string, attempt = 0): Promise<T> {
+  const url = new URL(SECOP_BASE);
+  url.searchParams.set("query", query);
   try {
-    return await fetchWithTimeout<T>(url);
+    return await fetchWithTimeout<T>(url.toString());
   } catch (err) {
     if (attempt < 2) {
       await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
-      return fetchPage<T>(params, attempt + 1);
+      return fetchQuery<T>(query, attempt + 1);
     }
     throw err;
   }
 }
 
 async function fetchCount(where: string): Promise<number> {
-  const data = await fetchPage<Array<{ count: string }>>({
-    $select: "count(*) as count",
-    $where: where,
-  });
+  const data = await fetchQuery<Array<{ count: string }>>(
+    `SELECT count(*) AS count WHERE ${where}`
+  );
   return Number(data[0]?.count ?? 0);
 }
 
-async function fetchAllParallel<T>(
+async function fetchAllParallel(
   where: string,
   select: string,
   onProgress?: (loaded: number, total: number) => void,
   batchSize = 4
-): Promise<T[]> {
+): Promise<SecopProceso[]> {
   const total = await fetchCount(where);
   if (total === 0) return [];
 
@@ -139,20 +223,16 @@ async function fetchAllParallel<T>(
     offsets.push(offset);
   }
 
-  const results: T[] = [];
+  const results: SecopProceso[] = [];
   let loaded = 0;
 
   for (let i = 0; i < offsets.length; i += batchSize) {
     const batch = offsets.slice(i, i + batchSize);
     const pages = await Promise.all(
       batch.map((offset) =>
-        fetchPage<T[]>({
-          $select: select,
-          $where: where,
-          $limit: String(PAGE_SIZE),
-          $offset: String(offset),
-          $order: "fecha_de_firma ASC",
-        })
+        fetchQuery<SecopProceso[]>(
+          `SELECT ${select} WHERE ${where} ORDER BY \`${FECHA_FIELD}\` ASC, \`id_del_proceso\` ASC LIMIT ${PAGE_SIZE} OFFSET ${offset}`
+        )
       )
     );
     for (const page of pages) {
@@ -165,11 +245,78 @@ async function fetchAllParallel<T>(
   return results;
 }
 
+// ─── Normalization (p6dx-8zbt → SecopContrato) ───────────────────────────────
+
+const ALL_FIELDS_SELECT = PROCESO_FIELDS.map((f) => `\`${f}\``).join(", ");
+
+/** Compute an end date from a start date plus `duracion` + `unidad_de_duracion` */
+function calcularFechaFin(inicio: string | undefined, duracion?: string, unidad?: string): string {
+  if (!inicio) return "";
+  const start = new Date(inicio);
+  const n = parseFloat(duracion || "");
+  if (isNaN(start.getTime()) || isNaN(n) || n <= 0) return "";
+
+  const u = (unidad || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const end = new Date(start);
+  if (u.startsWith("dia")) end.setDate(end.getDate() + Math.round(n));
+  else if (u.startsWith("semana")) end.setDate(end.getDate() + Math.round(n * 7));
+  else if (u.startsWith("mes")) end.setMonth(end.getMonth() + Math.round(n));
+  else if (u.startsWith("ano")) end.setFullYear(end.getFullYear() + Math.round(n));
+  else if (u.startsWith("hora")) end.setTime(end.getTime() + n * 3600000);
+  else return "";
+
+  return end.toISOString().replace("Z", "");
+}
+
+function toContrato(p: SecopProceso): SecopContrato {
+  const fechaFirma = p.fecha_adjudicacion || p.fecha_de_publicacion_del || "";
+  const url = typeof p.urlproceso === "string" ? p.urlproceso : p.urlproceso?.url;
+  const valor = p.valor_total_adjudicacion && parseFloat(p.valor_total_adjudicacion) > 0
+    ? p.valor_total_adjudicacion
+    : p.precio_base || "";
+
+  return {
+    nombre_entidad: p.entidad || "",
+    nit_entidad: p.nit_entidad || "",
+    departamento: p.departamento_entidad || "",
+    ciudad: p.ciudad_entidad || "",
+    proceso_de_compra: p.id_del_portafolio || p.id_del_proceso || "",
+    id_contrato: p.id_del_proceso || "",
+    referencia_del_contrato: p.referencia_del_proceso || "",
+    estado_contrato: p.estado_resumen || p.estado_del_procedimiento || "",
+    descripcion_del_proceso: p.descripci_n_del_procedimiento || "",
+    tipo_de_contrato: p.tipo_de_contrato || "",
+    modalidad_de_contratacion: p.modalidad_de_contratacion || "",
+    fecha_de_firma: fechaFirma,
+    fecha_de_inicio_del_contrato: fechaFirma,
+    fecha_de_fin_del_contrato: calcularFechaFin(fechaFirma, p.duracion, p.unidad_de_duracion),
+    proveedor_adjudicado: p.nombre_del_proveedor || "",
+    documento_proveedor: p.nit_del_proveedor_adjudicado || "",
+    valor_del_contrato: valor,
+    // El dataset de procesos no reporta ejecución financiera
+    valor_facturado: "",
+    valor_pagado: "",
+    valor_pendiente_de_pago: "",
+    valor_pendiente_de_ejecucion: "",
+    objeto_del_contrato: p.nombre_del_procedimiento || p.descripci_n_del_procedimiento || "",
+    duraci_n_del_contrato: [p.duracion, p.unidad_de_duracion].filter(Boolean).join(" "),
+    nombre_supervisor: p.nombre_del_adjudicador || "",
+    urlproceso: url ? { url } : undefined,
+    dias_adicionados: "",
+    ultima_actualizacion: p.fecha_de_ultima_publicaci || "",
+  };
+}
+
 // ─── Seccional extraction ─────────────────────────────────────────────────────
 
 export function extractSeccional(nombre: string): string {
-  const match = nombre.match(/Judicial\s+de\s+(.+)$/i);
-  if (!match) return nombre.trim();
+  const match =
+    nombre.match(/Judicial\s+(?:de|del)\s+(.+)$/i) ||
+    nombre.match(/DESAJ\s*[-–:]?\s*(?:de\s+)?(.+)$/i);
+  if (!match) return nombre.trim().toUpperCase();
   return match[1].trim().replace(/\.$/, "").toUpperCase();
 }
 
@@ -194,6 +341,10 @@ export function calcularRiesgo(contrato: SecopContratoMin): RiesgoInfo {
 
   const vc = parseFloat(contrato.valor_del_contrato || "0") || 0;
   if (vc === 0) {
+    return { nivel: "sin_dato", tiempoTranscurrido: tt * 100, rezagoFinanciero: 0, rezagoFisico: 0, diasRestantes };
+  }
+
+  if (!contrato.valor_pagado && !contrato.valor_facturado) {
     return { nivel: "sin_dato", tiempoTranscurrido: tt * 100, rezagoFinanciero: 0, rezagoFisico: 0, diasRestantes };
   }
 
@@ -224,57 +375,60 @@ export function calcularRiesgo(contrato: SecopContratoMin): RiesgoInfo {
 
 /** Get ALL distinct seccionales (no date filter) */
 export async function getAllSecopSeccionales(): Promise<string[]> {
-  const data = await fetchPage<Array<{ nombre_entidad: string }>>({
-    $query: `SELECT nombre_entidad WHERE ${ENTIDAD_WHERE} GROUP BY nombre_entidad ORDER BY nombre_entidad ASC`,
-  });
-  return [...new Set(data.map((d) => extractSeccional(d.nombre_entidad)))].sort();
+  const data = await fetchQuery<Array<{ entidad: string }>>(
+    `SELECT \`entidad\` WHERE ${ENTIDAD_WHERE} GROUP BY \`entidad\` ORDER BY \`entidad\` ASC`
+  );
+  return [...new Set(data.map((d) => extractSeccional(d.entidad || "")))].sort();
 }
 
-/** Get distinct years from fecha_de_firma */
+/** Get distinct years from the publication date */
 export async function getSecopYears(): Promise<number[]> {
-  const data = await fetchPage<Array<{ year: string }>>({
-    $query: `SELECT date_extract_y(fecha_de_firma) as year WHERE ${ENTIDAD_WHERE} GROUP BY date_extract_y(fecha_de_firma) ORDER BY year DESC`,
-  });
-  return data.map((d) => Number(d.year)).filter((y) => !isNaN(y));
+  const data = await fetchQuery<Array<{ year: string }>>(
+    `SELECT date_extract_y(\`${FECHA_FIELD}\`) AS year WHERE ${ENTIDAD_WHERE} GROUP BY year ORDER BY year DESC`
+  );
+  return data.map((d) => Number(d.year)).filter((y) => !isNaN(y) && y > 0);
 }
 
 /** Get distinct months for a year */
 export async function getSecopMonths(year: number): Promise<number[]> {
-  const data = await fetchPage<Array<{ month: string }>>({
-    $query: `SELECT date_extract_m(fecha_de_firma) as month WHERE ${ENTIDAD_WHERE} AND date_extract_y(fecha_de_firma) = ${year} GROUP BY date_extract_m(fecha_de_firma) ORDER BY month ASC`,
-  });
-  return data.map((d) => Number(d.month)).filter((m) => !isNaN(m));
+  const data = await fetchQuery<Array<{ month: string }>>(
+    `SELECT date_extract_m(\`${FECHA_FIELD}\`) AS month WHERE ${ENTIDAD_WHERE} AND ${yearMonthWhere(year)} GROUP BY month ORDER BY month ASC`
+  );
+  return data.map((d) => Number(d.month)).filter((m) => !isNaN(m) && m > 0);
 }
 
 /** Get distinct seccionales for a year+month */
 export async function getSecopSeccionales(year: number, month: number): Promise<string[]> {
-  const data = await fetchPage<Array<{ nombre_entidad: string }>>({
-    $query: `SELECT nombre_entidad WHERE ${ENTIDAD_WHERE} AND date_extract_y(fecha_de_firma) = ${year} AND date_extract_m(fecha_de_firma) = ${month} GROUP BY nombre_entidad ORDER BY nombre_entidad ASC`,
-  });
-  return data.map((d) => extractSeccional(d.nombre_entidad));
+  const data = await fetchQuery<Array<{ entidad: string }>>(
+    `SELECT \`entidad\` WHERE ${ENTIDAD_WHERE} AND ${yearMonthWhere(year, month)} GROUP BY \`entidad\` ORDER BY \`entidad\` ASC`
+  );
+  return [...new Set(data.map((d) => extractSeccional(d.entidad || "")))].sort();
 }
 
-/** Get contracts list for filters */
+/** Get processes list for filters */
 export async function getSecopContratos(
   year: number,
   month: number,
   seccional: string
 ): Promise<Array<{ id_contrato: string; proveedor_adjudicado: string }>> {
-  const data = await fetchPage<SecopContrato[]>({
-    $query: `SELECT id_contrato, proveedor_adjudicado WHERE ${ENTIDAD_WHERE} AND date_extract_y(fecha_de_firma) = ${year} AND date_extract_m(fecha_de_firma) = ${month} AND upper(nombre_entidad) like '%${seccional}%' ORDER BY id_contrato ASC LIMIT 1000`,
-  });
-  return data.map((d) => ({
-    id_contrato: d.id_contrato,
-    proveedor_adjudicado: d.proveedor_adjudicado || "Sin proveedor",
-  }));
+  const data = await fetchQuery<SecopProceso[]>(
+    `SELECT \`id_del_proceso\`, \`nombre_del_proveedor\` WHERE ${ENTIDAD_WHERE} AND ${yearMonthWhere(year, month)} AND ${seccionalWhere(seccional)} ORDER BY \`id_del_proceso\` ASC LIMIT ${PAGE_SIZE}`
+  );
+  const seen = new Set<string>();
+  return data
+    .filter((d) => d.id_del_proceso && !seen.has(d.id_del_proceso) && seen.add(d.id_del_proceso))
+    .map((d) => ({
+      id_contrato: d.id_del_proceso as string,
+      proveedor_adjudicado: d.nombre_del_proveedor || "Sin proveedor",
+    }));
 }
 
-/** Get full contract detail */
+/** Get full process detail */
 export async function getSecopContratoDetail(idContrato: string): Promise<SecopContrato | null> {
-  const data = await fetchPage<SecopContrato[]>({
-    $query: `SELECT * WHERE id_contrato = '${idContrato}' LIMIT 1`,
-  });
-  return data[0] || null;
+  const data = await fetchQuery<SecopProceso[]>(
+    `SELECT ${ALL_FIELDS_SELECT} WHERE \`id_del_proceso\` = ${soqlString(idContrato)} LIMIT 1`
+  );
+  return data[0] ? toContrato(data[0]) : null;
 }
 
 /** Get full report for a seccional – uses parallel pagination */
@@ -284,33 +438,61 @@ export async function getSecopReporteBySeccional(
   seccional: string,
   onProgress?: (loaded: number, total: number) => void
 ): Promise<SecopContrato[]> {
-  const where = `${ENTIDAD_WHERE} AND date_extract_y(fecha_de_firma) = ${year} AND date_extract_m(fecha_de_firma) = ${month} AND upper(nombre_entidad) like '%${seccional}%'`;
-  return fetchAllParallel<SecopContrato>(where, "*", onProgress);
+  const where = `${ENTIDAD_WHERE} AND ${yearMonthWhere(year, month)} AND ${seccionalWhere(seccional)}`;
+  const rows = await fetchAllParallel(where, ALL_FIELDS_SELECT, onProgress);
+  return rows.map(toContrato);
 }
 
+/** How far back to look for processes that may still be in force */
+const VIGENTES_LOOKBACK_YEARS = 3;
+
 /**
- * Fetch all ACTIVE contracts (fecha_de_fin >= today).
- * Minimal field selection for maximum speed.
+ * Fetch all ACTIVE processes (computed end date >= today).
+ * The dataset has no end-date column, so recent processes are fetched with a
+ * minimal field selection and the end date is computed from `duracion`.
  */
 export async function getSecopDashboardVigentes(
   onProgress?: (loaded: number, total: number) => void
 ): Promise<SecopContratoMin[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date();
+  const desde = new Date(today);
+  desde.setFullYear(desde.getFullYear() - VIGENTES_LOOKBACK_YEARS);
   const select = [
-    "id_contrato",
-    "nombre_entidad",
-    "fecha_de_firma",
-    "fecha_de_fin_del_contrato",
-    "valor_del_contrato",
-    "valor_facturado",
-    "valor_pagado",
-    "estado_contrato",
-    "objeto_del_contrato",
-    "proveedor_adjudicado",
-  ].join(",");
+    "id_del_proceso",
+    "entidad",
+    "fecha_de_publicacion_del",
+    "fecha_adjudicacion",
+    "duracion",
+    "unidad_de_duracion",
+    "precio_base",
+    "valor_total_adjudicacion",
+    "estado_resumen",
+    "estado_del_procedimiento",
+    "nombre_del_procedimiento",
+    "nombre_del_proveedor",
+  ]
+    .map((f) => `\`${f}\``)
+    .join(", ");
 
-  const where = `${ENTIDAD_WHERE} AND fecha_de_fin_del_contrato >= '${today}T00:00:00.000'`;
-  return fetchAllParallel<SecopContratoMin>(where, select, onProgress, 5);
+  const where = `${ENTIDAD_WHERE} AND \`${FECHA_FIELD}\` >= ${soqlString(desde.toISOString().split("T")[0] + "T00:00:00")}`;
+  const rows = await fetchAllParallel(where, select, onProgress, 5);
+  const todayStr = today.toISOString().split("T")[0];
+
+  return rows
+    .map(toContrato)
+    .filter((c) => c.fecha_de_fin_del_contrato && c.fecha_de_fin_del_contrato.split("T")[0] >= todayStr)
+    .map((c) => ({
+      id_contrato: c.id_contrato,
+      nombre_entidad: c.nombre_entidad,
+      fecha_de_firma: c.fecha_de_firma,
+      fecha_de_fin_del_contrato: c.fecha_de_fin_del_contrato,
+      valor_del_contrato: c.valor_del_contrato,
+      valor_facturado: c.valor_facturado,
+      valor_pagado: c.valor_pagado,
+      estado_contrato: c.estado_contrato,
+      objeto_del_contrato: c.objeto_del_contrato,
+      proveedor_adjudicado: c.proveedor_adjudicado,
+    }));
 }
 
 // ─── Aggregation ──────────────────────────────────────────────────────────────
