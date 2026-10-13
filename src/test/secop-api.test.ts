@@ -18,6 +18,7 @@ describe("secop-api (p6dx-8zbt v3)", () => {
     const query = url.searchParams.get("query")!;
     expect(query).toContain('caseless_contains(`entidad`, "ADMINISTRACIÓN JUDICIAL")');
     expect(query).toContain('caseless_contains(`entidad`, "DESAJ")');
+    expect(query).toContain('`fecha_de_publicacion_del` >= "2026-01-01T00:00:00"');
   });
 
   it("maps a process row to SecopContrato", async () => {

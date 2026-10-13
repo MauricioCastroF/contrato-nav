@@ -7,9 +7,11 @@
  */
 const SECOP_BASE = "https://www.datos.gov.co/api/v3/views/p6dx-8zbt/query.json";
 const SECOP_APP_TOKEN: string | undefined = import.meta.env.VITE_SOCRATA_APP_TOKEN;
-const ENTIDAD_WHERE = `(caseless_contains(\`entidad\`, "ADMINISTRACIÓN JUDICIAL") OR caseless_contains(\`entidad\`, "DESAJ"))`;
 /** Fecha usada para los filtros de año/mes y para ordenar */
 const FECHA_FIELD = "fecha_de_publicacion_del";
+/** Solo se consultan procesos publicados desde esta fecha */
+const FECHA_PUBLICACION_DESDE = "2026-01-01T00:00:00";
+const ENTIDAD_WHERE = `(caseless_contains(\`entidad\`, "ADMINISTRACIÓN JUDICIAL") OR caseless_contains(\`entidad\`, "DESAJ")) AND \`${FECHA_FIELD}\` >= "${FECHA_PUBLICACION_DESDE}"`;
 const PAGE_SIZE = 1000;
 const REQUEST_TIMEOUT_MS = 30000;
 
@@ -443,20 +445,15 @@ export async function getSecopReporteBySeccional(
   return rows.map(toContrato);
 }
 
-/** How far back to look for processes that may still be in force */
-const VIGENTES_LOOKBACK_YEARS = 3;
-
 /**
  * Fetch all ACTIVE processes (computed end date >= today).
- * The dataset has no end-date column, so recent processes are fetched with a
+ * The dataset has no end-date column, so processes are fetched with a
  * minimal field selection and the end date is computed from `duracion`.
  */
 export async function getSecopDashboardVigentes(
   onProgress?: (loaded: number, total: number) => void
 ): Promise<SecopContratoMin[]> {
   const today = new Date();
-  const desde = new Date(today);
-  desde.setFullYear(desde.getFullYear() - VIGENTES_LOOKBACK_YEARS);
   const select = [
     "id_del_proceso",
     "entidad",
@@ -474,7 +471,7 @@ export async function getSecopDashboardVigentes(
     .map((f) => `\`${f}\``)
     .join(", ");
 
-  const where = `${ENTIDAD_WHERE} AND \`${FECHA_FIELD}\` >= ${soqlString(desde.toISOString().split("T")[0] + "T00:00:00")}`;
+  const where = ENTIDAD_WHERE;
   const rows = await fetchAllParallel(where, select, onProgress, 5);
   const todayStr = today.toISOString().split("T")[0];
 
